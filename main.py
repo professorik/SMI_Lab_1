@@ -1,50 +1,33 @@
-import os
-import re
 import pandas as pd
 import numpy as np
 
-path = "sample_data"
-N = 26
 
-
-def read_corpus():
-    _data = ""
-    for _filename in filter(lambda p: p.endswith("txt"), os.listdir(path)):
-        _filepath = os.path.join(path, _filename)
-        with open(_filepath, mode='r') as f:
-            _data += clean(f.read())
-    return _data
-
-
-def clean(text: str) -> str:
-    return re.sub(r'[^a-zA-Z]', '', text).lower()
-
-
-def get_columns():
-    _columns = []
-    for i in range(N):
-        _columns.append(chr(ord("a") + i))
-    return _columns
-
-
-def get_matrix() -> pd.DataFrame:
-    df = {i: {} for i in columns}
-    for i in range(1, len(data_cleaned)):
-        df[data_cleaned[i - 1]][data_cleaned[i]] = 1 + df[data_cleaned[i - 1]].get(data_cleaned[i], 0)
-    matrix_data = [[0] * N for _ in range(N)]
-    for i in range(N):
-        for j in range(N):
-            matrix_data[i][j] = df[columns[i]].get(columns[j], 0)
-    return pd.DataFrame(matrix_data, columns=columns, index=columns)
+O = np.array([3, 3, 1, 4, 4, 2, 2, 4, 1, 4, 1, 3, 1, 1, 2, 3, 1, 1, 2, 4, 1])
+A = np.array([[0.285401553, 0.13692528, 0.134884133, 0.402212507, 0.040576527],
+     [0.268120683, 0.084106544, 0.184904517, 0.002143387, 0.460724869],
+     [0.258362965, 0.270654229, 0.025095239, 0.285886423, 0.160001144],
+     [0.057445693, 0.182135142, 0.366747246, 0.045026877, 0.348645042],
+     [0.06172223, 0.339304363, 0.346613515, 0.187737265, 0.064622627]])
+B = np.array([[0.183596051, 0.469764955, 0.091442216, 0.255196778],
+     [0.3952734, 0.396442577, 0.054157532, 0.154126491],
+     [0.270317147, 0.039744366, 0.192033529, 0.497904958],
+     [0.266547518, 0.227329385, 0.04138707, 0.464736027],
+     [0.384214142, 0.187818085, 0.314507277, 0.113460496]])
+P = np.array([0.209628791, 0.125436813, 0.202272901, 0.404947709, 0.057713786])
 
 
 if __name__ == '__main__':
-    data_cleaned = read_corpus()
-    print("Data length: %d" % len(data_cleaned))
-    columns = get_columns()
-    matrix = get_matrix()
-    #print(matrix.to_string())
-    matrix = matrix.div(matrix.sum(axis=1), axis=0)
-    #print(matrix.to_string())
-    matrix["C"] = 1 + (matrix * np.log2(matrix.replace(0, np.nan))).sum(axis=1) / np.log2(N)
-    print(matrix.to_string())
+    N = len(A)
+    M = len(B[0])
+    T = len(O)
+    alpha = np.zeros((N, T))
+    alpha[:, 0] = P.T * B[:, O[0] - 1]
+    for state in range(1, T):
+        for i in range(N):
+            tp = (alpha[:, state - 1] * A[:, i]).sum()
+            alpha[i, state] = tp * B[i, O[state] - 1]
+
+    df = pd.DataFrame(alpha)
+    print(df.iloc[:, :11].to_string(header=False, index=False))
+    print(df.iloc[:, 11:].to_string(header=False, index=False))
+    print("Pr(O|lambda)=", alpha[:, -1].sum())
